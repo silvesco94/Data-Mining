@@ -1,0 +1,363 @@
+---
+title: "A2 Decision Tree Classification and Evaluation"
+author: "Scott Silverstein"
+date: "2024-03-08"
+output: 
+  html_document: 
+    toc: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+
+library(C50)
+library(caret)
+library(rminer)
+library(rmarkdown)
+library(tidyverse)
+```
+# Task 1 
+## Part 1: Set up, data import, and inspection code
+### Import Data 
+
+```{r}
+cd <- read.csv("CD_additional_balanced-1.csv")
+```
+
+
+### Structure of output 
+
+
+```{r}
+cd %>% str()
+```
+
+
+### Transform All character variables that include categorical values into Factors 
+
+```{r}
+cd <- cd %>%
+  mutate(across(c(housing, marital, education, housing, loan,job, default, contact, month, day_of_week, poutcome, y ), factor))
+
+cd %>% str()
+```
+
+### Summary 
+
+```{r}
+cd %>% summary()
+```
+## Part 2: For each level of the target variable,  show the count and the percentage of instances belonging to that level.
+
+
+```{r}
+cd_summary <- cd %>%
+  group_by(y) %>%
+  summarise(
+    Count = n(), #count of instances in each level
+    Percentage = n() / nrow(cd) * 100 #percentage of instances in each level
+  )
+
+# Print the summary
+print(cd_summary)
+```
+
+
+## Part 3 Data Preporation 
+
+### A) Partition the dataset for simple hold-out classification model building and evaluation 
+
+```{r}
+set.seed(300) 
+#proportion 70% training 30% testing 
+prop.train <- 0.7 
+
+train_index <- createDataPartition(cd$y, p= prop.train, list = FALSE)
+train_set <- cd[train_index,]
+test_set <- cd[-train_index,]
+
+train_set %>% summary()
+test_set %>% summary() 
+```
+### B) Show the count and distributions (i.e., percentages or proportions of “yes” and “n”) of y in the train set and in the test set.
+
+
+Training set: 
+
+
+```{r}
+train_set %>%
+  group_by(y) %>%
+  summarise(
+    Count = n(),
+    Percentage = (n() / nrow(test_set)) * 100
+  )
+```
+
+
+Test Set: 
+
+```{r}
+test_set %>%
+  group_by(y) %>%
+  summarise(
+    Count = n(),
+    Percentage = (n() / nrow(test_set)) * 100
+  )
+```
+## Part 4 Train Decision trees to classify y 
+
+### Train 7 C5.0 models to classify y with all other variables as predictors
+
+```{r}
+tree_cf_1 <- C5.0(y~.,train_set,control = C5.0Control(CF=.97,earlyStopping = FALSE,noGlobalPruning = TRUE))
+tree_cf_2 <- C5.0(y~.,train_set,control = C5.0Control(CF=.35,earlyStopping = FALSE,noGlobalPruning = TRUE))
+tree_cf_3 <- C5.0(y~.,train_set,control = C5.0Control(CF=.12,earlyStopping = FALSE,noGlobalPruning = TRUE))
+tree_cf_4 <- C5.0(y~.,train_set,control = C5.0Control(CF=.08,earlyStopping = FALSE,noGlobalPruning = TRUE))
+tree_cf_5 <- C5.0(y~.,train_set,control = C5.0Control(CF=.04,earlyStopping = FALSE,noGlobalPruning = TRUE))
+tree_cf_6 <- C5.0(y~.,train_set,control = C5.0Control(CF=.02,earlyStopping = FALSE,noGlobalPruning = TRUE))
+tree_cf_7 <- C5.0(y~.,train_set,control = C5.0Control(CF=.0,earlyStopping = FALSE,noGlobalPruning = TRUE))
+```
+
+## Part 5 Model Information 
+
+### Show the tree size for each model 
+
+```{r}
+tree_cf_1$size
+tree_cf_2$size
+tree_cf_3$size
+tree_cf_4$size
+tree_cf_5$size
+tree_cf_6$size
+tree_cf_7$size
+```
+
+### Explain how you define the most and least complex trees.
+
+Using just the size of tree, simply put the higher the number the more complex the tree is. 
+
+
+### Plot the least complex tree.
+
+```{r fig.height=8, fig.width=20}
+plot(tree_cf_7)
+```
+
+### Explain the steps the model would make to determine how to classify the following instance : 
+nr.employed = 6000 and duration = 500. What would the prediction be? Consider using the least complex tree for this scenario.  
+
+Steps 
+
+1) start at root node
+2) follow the branches based on feature values 
+3) reach a leaf node
+4) prediction 
+
+Prediction: Node 28 
+
+
+
+```{r}
+train_predictions_cf_1 <- predict(tree_cf_1, train_set)
+train_predictions_cf_2 <- predict(tree_cf_2, train_set)
+train_predictions_cf_3 <- predict(tree_cf_3, train_set)
+train_predictions_cf_4 <- predict(tree_cf_4, train_set)
+train_predictions_cf_5 <- predict(tree_cf_5, train_set)
+train_predictions_cf_6 <- predict(tree_cf_6, train_set)
+train_predictions_cf_7 <- predict(tree_cf_7, train_set)
+
+# Generate predictions for the testing set
+test_predictions_cf_1 <- predict(tree_cf_1, test_set)
+test_predictions_cf_2 <- predict(tree_cf_2, test_set)
+test_predictions_cf_3 <- predict(tree_cf_3, test_set)
+test_predictions_cf_4 <- predict(tree_cf_4, test_set)
+test_predictions_cf_5 <- predict(tree_cf_5, test_set)
+test_predictions_cf_6 <- predict(tree_cf_6, test_set)
+test_predictions_cf_7 <- predict(tree_cf_7, test_set)
+```
+
+
+## Part 7: 
+
+### Using the predictions create confusion matrices for all models and Train and Test 
+
+```{r}
+
+#training 
+conf_matrix.train_of_cf_1 <- confusionMatrix(train_predictions_cf_1, train_set$y) 
+conf_matrix.train_of_cf_2 <- confusionMatrix(train_predictions_cf_2, train_set$y) 
+conf_matrix.train_of_cf_3 <- confusionMatrix(train_predictions_cf_3, train_set$y) 
+conf_matrix.train_of_cf_4 <- confusionMatrix(train_predictions_cf_4, train_set$y) 
+conf_matrix.train_of_cf_5 <- confusionMatrix(train_predictions_cf_5, train_set$y) 
+conf_matrix.train_of_cf_6 <- confusionMatrix(train_predictions_cf_6, train_set$y) 
+conf_matrix.train_of_cf_7 <- confusionMatrix(train_predictions_cf_7, train_set$y) 
+
+#Testing 
+conf_matrix.test_of_cf_1 <- confusionMatrix(test_predictions_cf_1, test_set$y)
+conf_matrix.test_of_cf_2 <- confusionMatrix(test_predictions_cf_2, test_set$y) 
+conf_matrix.test_of_cf_3 <- confusionMatrix(test_predictions_cf_3, test_set$y) 
+conf_matrix.test_of_cf_4 <- confusionMatrix(test_predictions_cf_4, test_set$y) 
+conf_matrix.test_of_cf_5 <- confusionMatrix(test_predictions_cf_5, test_set$y) 
+conf_matrix.test_of_cf_6 <- confusionMatrix(test_predictions_cf_6, test_set$y) 
+conf_matrix.test_of_cf_7 <- confusionMatrix(test_predictions_cf_7, test_set$y) 
+```
+
+
+## Part 8 Generate Evaluation Metrics for each Model 
+
+A) Using the predictions generate Accuracy, F1, Precision, Recal Score all model in train and test setts 
+
+Accuracy 
+
+```{r}
+
+#vector of train 
+train_acc <- c(
+  mmetric(train_set$y, train_predictions_cf_1, metric="ACC"),
+  mmetric(train_set$y, train_predictions_cf_2, metric="ACC"),
+  mmetric(train_set$y, train_predictions_cf_3, metric="ACC"),
+  mmetric(train_set$y, train_predictions_cf_4, metric="ACC"),
+  mmetric(train_set$y, train_predictions_cf_5, metric="ACC"),
+  mmetric(train_set$y, train_predictions_cf_6, metric="ACC"),
+  mmetric(train_set$y, train_predictions_cf_7, metric="ACC"))
+
+# vector of test 
+test_acc <- c(
+  mmetric(test_set$y, test_predictions_cf_1, metric = "ACC"),
+  mmetric(test_set$y, test_predictions_cf_2, metric = "ACC"),
+  mmetric(test_set$y, test_predictions_cf_3, metric = "ACC"),
+  mmetric(test_set$y, test_predictions_cf_4, metric = "ACC"),
+  mmetric(test_set$y, test_predictions_cf_5, metric = "ACC"),
+  mmetric(test_set$y, test_predictions_cf_6, metric = "ACC"),
+  mmetric(test_set$y, test_predictions_cf_7, metric = "ACC"))
+cf_vector <- c(.97,.35,.12,.08,.04,.02,.0)
+leaf_nodes_vector <- c(tree_cf_1$size, 
+                       tree_cf_2$size,
+                       tree_cf_3$size, 
+                       tree_cf_4$size,
+                       tree_cf_5$size, 
+                       tree_cf_6$size, 
+                       tree_cf_7$size)
+acc_df_cf <- data.frame(train_acc,test_acc,cf_vector,leaf_nodes_vector)
+acc_df_cf 
+```
+
+Accuracy, F1, Precision, Recall all together  
+
+```{r}
+# function to calculate metrics
+calculate_metrics <- function(actual, predicted) {
+  acc <- mmetric(actual, predicted, metric="ACC")
+  f1 <- mmetric(actual, predicted, metric="F1")
+  precision <- mmetric(actual, predicted, metric="PREC")
+  tpr <- mmetric(actual, predicted, metric="TPR") 
+  c(acc, f1, precision, tpr)
+}
+
+# Initialize an empty data frame
+results <- data.frame()
+
+# Vector of model predictions for train and test sets
+train_predictions <- list(train_predictions_cf_1, train_predictions_cf_2, train_predictions_cf_3, 
+                          train_predictions_cf_4, train_predictions_cf_5, train_predictions_cf_6, 
+                          train_predictions_cf_7)
+
+test_predictions <- list(test_predictions_cf_1, test_predictions_cf_2, test_predictions_cf_3, 
+                         test_predictions_cf_4, test_predictions_cf_5, test_predictions_cf_6, 
+                         test_predictions_cf_7)
+
+# Calculate metrics for each model dataframe 
+for(i in seq_along(train_predictions)) {
+  train_metrics <- calculate_metrics(train_set$y, train_predictions[[i]])
+  test_metrics <- calculate_metrics(test_set$y, test_predictions[[i]])
+  
+  # Combine metrics with CF and leaf nodes info
+  model_results <- data.frame(
+    cf_value = cf_vector[i],
+    leaf_nodes = leaf_nodes_vector[i],
+    train_acc = train_metrics[1],
+    train_f1 = train_metrics[2],
+    train_precision = train_metrics[3],
+    train_tpr = train_metrics[4],
+    test_acc = test_metrics[1],
+    test_f1 = test_metrics[2],
+    test_precision = test_metrics[3],
+    test_tpr = test_metrics[4]
+  )
+  
+  # Bind the model 
+  results <- rbind(results, model_results)
+}
+
+
+results
+
+```
+
+
+
+
+## Part 9 Show Feature Importance for Each Model 
+
+### A) Show the feature importance for each of the Decision trees 
+
+```{r}
+C5imp(tree_cf_1)
+C5imp(tree_cf_2)
+C5imp(tree_cf_3)
+C5imp(tree_cf_4)
+C5imp(tree_cf_5)
+C5imp(tree_cf_6)
+C5imp(tree_cf_7)
+```
+# Task II: Reflections 
+
+## 1) How does changing the CF hyper parameter affect the model complexity?
+
+A higher CF leads to more pruning, resulting in a simpler treee with fewer nodes and branches. Whereas, a lower CF leads to less pruning which results in a more complex model with more nodes and branches. Lower CF will capture more patterns in the training set, but since it breaks it down into smaller and smaller nodes might increase the risk of over fitting the model. Probably the solution is somewhere in the middle. 
+
+## 2) Which model had the best performance in Train set? What was the complexity for this model? How did this model perform in the Train set?
+
+It seems like the highest performance was actually the CF value of .97. The training accuracy for this was ~94.5%. This model had the most leaf nodes with 347, making it the most complex mode. 
+
+This model also achieved the highest F1, precision, and TPR on the traingin set as well. 
+
+
+## 3) Which model had the best performance in the Test set? What was the complexity for this model? How did this model perform in the Test set?
+
+The model with the highest results in the test set was the one with the CF value of .35. This had an accuracy of ~87.4%. The model had 150 leaf nodes which is on the lower end of complexity. Also had higher if not highest in, F1, precision, and TPR. The differentiation in it's f1,precision, and TPR brought it to the lead even though the accuracy is ever so slightly not the highest in the grouping. 
+
+
+## 4) What is your conclusion about the relationship between model complexity and performance on the Train and Test sets?
+
+
+I think my conclusion would be that as complexity increases it tends to do better on the training set than it does on the test set. Even though in the training set the accuracy was a bit hirer in this case, it is clear that overfitting might be a reasoning for it. Of course if you have smaller nodes there is going to be less of a reason for differentiation in the results. The best practice is probably a balance to complexity and generalization. the fact that the cf of .35 which is more than half the size of the most complex set does so well on the test set but also still performs quite well with an accuracy of 92% is a good comprimise to where you are reaching the more accurate middle ground between the two cases. 
+
+
+## 5) Which of the decision tree models is most complex? (Based your answer on the count of Leaf Nodes)
+
+Based on the count of leaf nodes the most complex model is .98 with 347 leaf nodes. 
+
+
+## 6) Which of the decision tree models generalizes to the testing data set the least? (Answer the question based on the overall decision tree accuracy/errors)
+
+The model with the lowest accuracy would probably be the one that generalizes the least. The one that would do this is CF of 0.0 and 15 leaf nodes with an accuracy of ~86.9%. 
+
+## 7) Which two of the decision tree models underfit the training and testing data? (Answer the question based on the overall decision tree accuracy/errors)
+
+The two models that would most likely be undefitting would be the two lowest ones cf 0.0 and cf 0.2. 
+
+
+## 8) Explain your reasons for choosing the decision trees. (Provide quantitative answers)
+
+As explained earlier, the decision tree that I would choose would be CF .35. This is because it balances the test and train set predictions the best. It has a high test accuracy of ~87.4% and still a quite high train accuracy of 92.3%. It also exhibits high scores in the other metrics such as F1 with a test F1 of ~87.2% and a train F1 of ~92%. 
+
+
+## 9) Take a long look at the test accuracy results: If you were taking these results to a meeting and were explaining how the model makes predictions which model would you choose? Another way of asking this: Which model is the most interpretable? 
+
+
+Despite the best answer for the best metrics being CF of .35, if we are adding in interpratability into this metric for human consumption the CF .12 is probably the best. We actually gain in accuracy test accuracy  from 87.4% to actually an increase to ~88%. The training accuracy does go down from 92% to 89% but 89 is still very high. It also only goes down marginally on the other metrics which are harder to explain to a stakeholder anyhow. Additionally, it is a simpler model which still isn't experiencing any underfitting making it easier to understand for human stakeholders.   
