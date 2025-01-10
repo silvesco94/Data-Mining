@@ -7,14 +7,14 @@
 
 ---
 
-## [A5 - Data Preprocessing and Clustering](./A5_Silverstein_Scott.html)
+## [Data Preprocessing and Clustering](./A5_Silverstein_Scott.html)
 - Conducted data preprocessing steps, including handling missing values and normalization.
 - Applied K-Means clustering to identify patterns and groups in the dataset.
 - Evaluated clustering results using silhouette scores and other validation metrics.
 
 ---
 
-## [A6 - Association Rule Mining](./a6_silverstein_scott.html)
+## [Association Rule Mining](./a6_silverstein_scott.html)
 - Implemented Apriori algorithm to discover frequent itemsets in transaction data.
 - Generated association rules and analyzed confidence and support metrics.
 - Provided actionable insights based on the extracted rules for decision-making.
